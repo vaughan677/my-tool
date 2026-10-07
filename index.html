@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>計算機</title>
+<style>
+  :root {
+    --bg: #eef1f7;
+    --panel: #ffffff;
+    --screen: #f3f5fb;
+    --text: #1c2333;
+    --muted: #7a849c;
+    --key: #e8ecf5;
+    --key-hover: #dde3f0;
+    --op: #dfe6ff;
+    --op-text: #3553d6;
+    --accent: #3553d6;
+    --accent-text: #ffffff;
+    --danger: #c43d4b;
+    --shadow: 0 10px 40px rgba(28, 35, 51, .12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #141a28; --panel: #1d2536; --screen: #151b2a; --text: #eef1f9; --muted: #8b95ad;
+      --key: #2a3449; --key-hover: #344059; --op: #2c3a66; --op-text: #a9bbff;
+      --accent: #f2b84b; --accent-text: #1c2333; --danger: #ff8a95; --shadow: 0 10px 40px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #141a28; --panel: #1d2536; --screen: #151b2a; --text: #eef1f9; --muted: #8b95ad;
+    --key: #2a3449; --key-hover: #344059; --op: #2c3a66; --op-text: #a9bbff;
+    --accent: #f2b84b; --accent-text: #1c2333; --danger: #ff8a95; --shadow: 0 10px 40px rgba(0,0,0,.45);
+  }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(16px, env(safe-area-inset-bottom, 0px));
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, -apple-system, "Segoe UI", sans-serif;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .wrap { width: 100%; max-width: 760px; display: flex; gap: 16px; align-items: stretch; justify-content: center; flex-wrap: wrap; }
+
+  .calc, .history {
+    background: var(--panel);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    padding: 18px;
+  }
+  .calc { width: 100%; max-width: 360px; }
+  .history { width: 100%; max-width: 360px; display: flex; flex-direction: column; min-height: 200px; }
+  @media (min-width: 760px) { .history { max-width: 340px; } }
+
+  .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .top h1 { font-size: 15px; font-weight: 600; margin: 0; color: var(--muted); letter-spacing: .04em; }
+  .theme {
+    border: 0; background: var(--key); color: var(--text);
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 16px;
+  }
+
+  .screen {
+    background: var(--screen);
+    border-radius: 16px;
+    padding: 14px 16px;
+    min-height: 118px;
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end;
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .expr {
+    width: 100%; text-align: right; color: var(--muted);
+    font-size: 22px; min-height: 30px; line-height: 1.3;
+    word-break: break-all; font-variant-numeric: tabular-nums;
+  }
+  .result {
+    width: 100%; text-align: right; font-weight: 600;
+    font-size: 40px; line-height: 1.2; margin-top: 4px;
+    font-variant-numeric: tabular-nums; word-break: break-all; min-height: 48px;
+  }
+  .result.error { color: var(--danger); font-size: 22px; font-weight: 500; }
+
+  .keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .keys button {
+    border: 0; border-radius: 16px; height: 62px;
+    background: var(--key); color: var(--text);
+    font-size: 24px; font-family: inherit; cursor: pointer;
+    transition: background .12s, transform .06s;
+  }
+  .keys button:hover { background: var(--key-hover); }
+  .keys button:active { transform: scale(.96); }
+  .keys button.op { background: var(--op); color: var(--op-text); }
+  .keys button.op:hover { filter: brightness(.96); }
+  .keys button.eq { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+  .keys button.eq:hover { filter: brightness(1.06); }
+  .keys button.fn { font-size: 20px; }
+  button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .history h2 { font-size: 15px; font-weight: 600; margin: 0; color: var(--muted); }
+  .h-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .clear-h {
+    border: 0; background: transparent; color: var(--op-text); cursor: pointer;
+    font-family: inherit; font-size: 14px; padding: 6px 8px; border-radius: 8px;
+  }
+  .clear-h:hover { background: var(--key); }
+  .h-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; max-height: 420px; flex: 1; }
+  .h-list li { margin: 0; }
+  .h-list button {
+    width: 100%; text-align: right; border: 0; background: transparent; color: var(--text);
+    padding: 10px 8px; border-radius: 12px; cursor: pointer; font-family: inherit;
+  }
+  .h-list button:hover { background: var(--key); }
+  .h-expr { display: block; color: var(--muted); font-size: 14px; word-break: break-all; }
+  .h-res { display: block; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; word-break: break-all; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; margin: auto; padding: 20px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <main class="calc" aria-label="計算機">
+    <div class="top">
+      <h1>計算機</h1>
+      <button class="theme" id="themeBtn" type="button" aria-label="切換深色或淺色模式">◐</button>
+    </div>
+
+    <div class="screen">
+      <div class="expr" id="expr" aria-label="算式"></div>
+      <div class="result" id="result" aria-live="polite">0</div>
+    </div>
+
+    <div class="keys" id="keys">
+      <button type="button" class="op fn" data-act="clear" aria-label="全部清除">AC</button>
+      <button type="button" class="op fn" data-act="paren" aria-label="括號">( )</button>
+      <button type="button" class="op fn" data-key="%" aria-label="百分比">%</button>
+      <button type="button" class="op" data-key="÷" aria-label="除">÷</button>
+
+      <button type="button" data-key="7">7</button>
+      <button type="button" data-key="8">8</button>
+      <button type="button" data-key="9">9</button>
+      <button type="button" class="op" data-key="×" aria-label="乘">×</button>
+
+      <button type="button" data-key="4">4</button>
+      <button type="button" data-key="5">5</button>
+      <button type="button" data-key="6">6</button>
+      <button type="button" class="op" data-key="-" aria-label="減">−</button>
+
+      <button type="button" data-key="1">1</button>
+      <button type="button" data-key="2">2</button>
+      <button type="button" data-key="3">3</button>
+      <button type="button" class="op" data-key="+" aria-label="加">+</button>
+
+      <button type="button" data-key="0">0</button>
+      <button type="button" data-key=".">.</button>
+      <button type="button" class="fn" data-act="back" aria-label="刪除一格">⌫</button>
+      <button type="button" class="eq" data-act="equals" aria-label="等於">=</button>
+    </div>
+  </main>
+
+  <aside class="history" aria-label="計算紀錄">
+    <div class="h-head">
+      <h2>計算紀錄</h2>
+      <button type="button" class="clear-h" id="clearHistory">清除紀錄</button>
+    </div>
+    <ul class="h-list" id="hList"></ul>
+    <p class="empty" id="hEmpty">還沒有紀錄。按下 = 後會顯示在這裡。</p>
+  </aside>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var exprEl = document.getElementById("expr");
+  var resultEl = document.getElementById("result");
+  var hList = document.getElementById("hList");
+  var hEmpty = document.getElementById("hEmpty");
+
+  var expr = "";          // 目前算式
+  var justEvaluated = false;
+  var history = [];       // {expr, result}
+  var OPS = "+-×÷";
+
+  /* ---------- 安全的算式解析(不使用 eval) ---------- */
+  function tokenize(s) {
+    var tokens = [], i = 0;
+    while (i < s.length) {
+      var c = s[i];
+      if (/[0-9.]/.test(c)) {
+        var j = i;
+        while (j < s.length && /[0-9.]/.test(s[j])) j++;
+        var numStr = s.slice(i, j);
+        if ((numStr.match(/\./g) || []).length > 1 || numStr === ".") throw new Error("格式錯誤");
+        tokens.push({ t: "num", v: parseFloat(numStr) });
+        i = j;
+      } else if ("+-×÷()%".indexOf(c) !== -1) {
+        tokens.push({ t: c });
+        i++;
+      } else {
+        throw new Error("格式錯誤");
+      }
+    }
+    return tokens;
+  }
+
+  function evaluate(s) {
+    var tokens = tokenize(s), pos = 0;
+    function peek() { return tokens[pos]; }
+    function next() { return tokens[pos++]; }
+
+    function parseExpr() {
+      var v = parseTerm();
+      while (peek() && (peek().t === "+" || peek().t === "-")) {
+        var op = next().t, r = parseTerm();
+        v = op === "+" ? v + r : v - r;
+      }
+      return v;
+    }
+    function parseTerm() {
+      var v = parseUnary();
+      while (peek() && (peek().t === "×" || peek().t === "÷")) {
+        var op = next().t, r = parseUnary();
+        if (op === "÷" && r === 0) throw new Error("無法除以零");
+        v = op === "×" ? v * r : v / r;
+      }
+      return v;
+    }
+    function parseUnary() {
+      var p = peek();
+      if (p && p.t === "-") { next(); return -parseUnary(); }
+      if (p && p.t === "+") { next(); return parseUnary(); }
+      return parsePostfix();
+    }
+    function parsePostfix() {
+      var v = parsePrimary();
+      while (peek() && peek().t === "%") { next(); v = v / 100; }
+      return v;
+    }
+    function parsePrimary() {
+      var p = next();
+      if (!p) throw new Error("算式不完整");
+      if (p.t === "num") return p.v;
+      if (p.t === "(") {
+        var v = parseExpr();
+        var close = next();
+        if (!close || close.t !== ")") throw new Error("括號未配對");
+        return v;
+      }
+      throw new Error("算式不完整");
+    }
+
+    var out = parseExpr();
+    if (pos < tokens.length) throw new Error("格式錯誤");
+    if (!isFinite(out)) throw new Error("結果超出範圍");
+    return out;
+  }
+
+  function fmt(n) {
+    if (Object.is(n, -0)) n = 0;
+    var r = parseFloat(n.toPrecision(12));
+    var abs = Math.abs(r);
+    if (abs !== 0 && (abs >= 1e15 || abs < 1e-9)) return r.toExponential(6).replace(/\.?0+e/, "e");
+    return r.toLocaleString("en-US", { maximumFractionDigits: 12, useGrouping: false });
+  }
+
+  function prettyExpr(s) {
+    return s.replace(/-/g, "−");
+  }
+
+  /* ---------- 畫面更新 ---------- */
+  function render(preview) {
+    exprEl.textContent = prettyExpr(expr);
+    resultEl.classList.remove("error");
+    if (preview && preview.error) {
+      resultEl.classList.add("error");
+      resultEl.textContent = preview.error;
+    } else if (preview && preview.value !== undefined) {
+      resultEl.textContent = preview.value;
+    } else {
+      resultEl.textContent = expr === "" ? "0" : "";
+    }
+    var len = resultEl.textContent.length;
+    resultEl.style.fontSize = resultEl.classList.contains("error") ? "" : (len > 18 ? "22px" : len > 12 ? "30px" : "");
+  }
+
+  function livePreview() {
+    if (expr === "") return render();
+    var s = expr;
+    // 自動補上未關閉的括號,用於即時預覽
+    var open = (s.match(/\(/g) || []).length, close = (s.match(/\)/g) || []).length;
+    if (open > close && /[0-9)%]$/.test(s)) s += new Array(open - close + 1).join(")");
+    try {
+      if (/^[0-9.]+$/.test(s)) return render();    // 單純數字不需預覽
+      var v = evaluate(s);
+      render({ value: fmt(v) });
+    } catch (e) {
+      render();
+    }
+  }
+
+  /* ---------- 輸入處理 ---------- */
+  function lastChar() { return expr.slice(-1); }
+  function currentNumber() {
+    var m = expr.match(/[0-9.]*$/);
+    return m ? m[0] : "";
+  }
+
+  function inputKey(k) {
+    var last = lastChar();
+
+    if (/[0-9]/.test(k)) {
+      if (justEvaluated) { expr = ""; justEvaluated = false; }
+      if (last === ")" || last === "%") expr += "×";
+      var cur = currentNumber();
+      if (cur === "0") expr = expr.slice(0, -1);   // 避免 05
+      expr += k;
+    } else if (k === ".") {
+      if (justEvaluated) { expr = ""; justEvaluated = false; }
+      if (last === ")" || last === "%") expr += "×";
+      var cn = currentNumber();
+      if (cn.indexOf(".") !== -1) return;
+      if (cn === "") expr += "0";
+      expr += ".";
+    } else if (OPS.indexOf(k) !== -1) {
+      justEvaluated = false;
+      if (expr === "") { if (k === "-") expr = "-"; else return; }
+      else if (last === "(") { if (k === "-") expr += "-"; else return; }
+      else if (OPS.indexOf(last) !== -1) {
+        // 連續運算子:取代前一個(但保留「× -」這類負號用法時以取代為主)
+        if (expr.length === 1 && last === "-") return;
+        expr = expr.slice(0, -1) + k;
+      } else if (last === ".") { expr += "0" + k; }
+      else expr += k;
+    } else if (k === "%") {
+      justEvaluated = false;
+      if (/[0-9)%]/.test(last)) expr += "%";
+    }
+    livePreview();
+  }
+
+  function inputParen() {
+    if (justEvaluated) justEvaluated = false;
+    var open = (expr.match(/\(/g) || []).length, close = (expr.match(/\)/g) || []).length;
+    var last = lastChar();
+    if (open > close && /[0-9)%]/.test(last)) {
+      expr += ")";
+    } else {
+      if (/[0-9)%.]/.test(last)) expr += "×";
+      expr += "(";
+    }
+    livePreview();
+  }
+
+  function backspace() {
+    if (justEvaluated) { justEvaluated = false; }
+    expr = expr.slice(0, -1);
+    livePreview();
+  }
+
+  function clearAll() {
+    expr = ""; justEvaluated = false;
+    render();
+  }
+
+  function equals() {
+    if (expr === "") return;
+    var s = expr;
+    var open = (s.match(/\(/g) || []).length, close = (s.match(/\)/g) || []).length;
+    if (open > close) s += new Array(open - close + 1).join(")");
+    s = s.replace(/[+\-×÷]$/, "");   // 去掉結尾的運算子
+    try {
+      var v = evaluate(s);
+      var text = fmt(v);
+      addHistory(prettyExpr(s), text);
+      expr = text.indexOf("e") === -1 ? text : "";
+      justEvaluated = true;
+      exprEl.textContent = prettyExpr(s) + " =";
+      resultEl.classList.remove("error");
+      resultEl.textContent = text;
+      var len = text.length;
+      resultEl.style.fontSize = len > 18 ? "22px" : len > 12 ? "30px" : "";
+    } catch (e) {
+      render({ error: e.message || "計算錯誤" });
+    }
+  }
+
+  /* ---------- 計算紀錄 ---------- */
+  function addHistory(e, r) {
+    history.unshift({ expr: e, result: r });
+    if (history.length > 30) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    hList.innerHTML = "";
+    hEmpty.style.display = history.length ? "none" : "";
+    history.forEach(function (item) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      b.setAttribute("aria-label", "套用 " + item.expr + " 等於 " + item.result);
+      var e = document.createElement("span"); e.className = "h-expr"; e.textContent = item.expr + " =";
+      var r = document.createElement("span"); r.className = "h-res"; r.textContent = item.result;
+      b.appendChild(e); b.appendChild(r);
+      b.addEventListener("click", function () {
+        expr = item.result.indexOf("e") === -1 ? item.result : "";
+        justEvaluated = false;
+        livePreview();
+      });
+      li.appendChild(b);
+      hList.appendChild(li);
+    });
+  }
+
+  document.getElementById("clearHistory").addEventListener("click", function () {
+    history = [];
+    renderHistory();
+  });
+
+  /* ---------- 事件綁定 ---------- */
+  document.getElementById("keys").addEventListener("click", function (ev) {
+    var btn = ev.target.closest("button");
+    if (!btn) return;
+    var act = btn.getAttribute("data-act"), key = btn.getAttribute("data-key");
+    if (act === "clear") clearAll();
+    else if (act === "back") backspace();
+    else if (act === "equals") equals();
+    else if (act === "paren") inputParen();
+    else if (key) inputKey(key);
+  });
+
+  document.addEventListener("keydown", function (ev) {
+    if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
+    var k = ev.key;
+    if (ev.target && ev.target.closest && ev.target.closest("button") && (k === "Enter" || k === " ")) return;
+
+    if (/^[0-9]$/.test(k)) inputKey(k);
+    else if (k === ".") inputKey(".");
+    else if (k === "+") inputKey("+");
+    else if (k === "-") inputKey("-");
+    else if (k === "*" || k === "x" || k === "X") inputKey("×");
+    else if (k === "/") { ev.preventDefault(); inputKey("÷"); }
+    else if (k === "%") inputKey("%");
+    else if (k === "(" || k === ")") inputParen();
+    else if (k === "Enter" || k === "=") { ev.preventDefault(); equals(); }
+    else if (k === "Backspace") backspace();
+    else if (k === "Escape" || k === "Delete") clearAll();
+    else return;
+  });
+
+  /* ---------- 深色 / 淺色切換 ---------- */
+  document.getElementById("themeBtn").addEventListener("click", function () {
+    var root = document.documentElement;
+    var dark = root.getAttribute("data-theme") === "dark" ||
+      (!root.getAttribute("data-theme") && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    root.setAttribute("data-theme", dark ? "light" : "dark");
+  });
+
+  renderHistory();
+  render();
+})();
+</script>
+</body>
+</html>
